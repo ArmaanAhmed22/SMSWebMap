@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="reset.css"></link>
+        <link rel="stylesheet" type="text/css" href="website.css"></link>
+        <script src="map.js"></script>
+
+        <title>Scarsdale Web Map</title>
+    </head>
+    <body>
+        
+        <h1 id="map-title">Scarsdale Middle School Interactive Map</h1>
+        <p id="map-description">Welcome to the interactive map of Scarsdale Middle School. Look up classrooms in the search bar and switch floors with the arrows</p>
+        <canvas width=5000 height=5000 id="map"></canvas>
+        <div id="change-cur-level-buttons">
+            <button id="left-button">
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="black" xmlns="http://www.w3.org/2000/svg">
+                    <polyline points="24 0, 0 12, 24 24" \>
+                </svg>
+            </button>
+            <button id="right-button">
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="black" xmlns="http://www.w3.org/2000/svg">
+                    <polyline points="0 0, 24 12, 0 24" \>
+                </svg>
+            </button>
+        </div>
+    </body>
+</html>
