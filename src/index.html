@@ -3,15 +3,19 @@
     <head>
         <link rel="stylesheet" type="text/css" href="reset.css"></link>
         <link rel="stylesheet" type="text/css" href="website.css"></link>
+        <script src="https://unpkg.com/lunr/lunr.js"></script>
         <script src="map.js"></script>
 
         <title>Scarsdale Web Map</title>
     </head>
     <body>
-        
+        <div id="tooltip"></div>
         <h1 id="map-title">Scarsdale Middle School Interactive Map</h1>
-        <p id="map-description">Welcome to the interactive map of Scarsdale Middle School. Look up classrooms in the search bar and switch floors with the arrows</p>
-        <canvas width=5000 height=5000 id="map"></canvas>
+        <p id="map-description">Welcome to the interactive map of Scarsdale Middle School. Look up classrooms in the search bar and switch floors with the arrows. Click on the map to view all relavent rooms and hover over any regions to obtain their name!</p>
+        <canvas width=5000 height=5000 id="map">
+            
+        </canvas>
+        <p id="floor-label"></p>
         <div id="change-cur-level-buttons">
             <button id="left-button">
                 <svg viewBox="0 0 24 24" width="24" height="24" stroke="black" xmlns="http://www.w3.org/2000/svg">
@@ -24,5 +28,7 @@
                 </svg>
             </button>
         </div>
+        <input id="search-bar-map" type="text" placeholder="Search..." onkeydown="search(event)">
+        </input>
     </body>
 </html>

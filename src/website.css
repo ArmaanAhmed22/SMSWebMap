@@ -10,20 +10,26 @@ h1 {
     font-weight:bold;
     font-size:40px;
     font-family:'Open Sans';
+    
+    
 }
 
 #map-title {
     color:white;
+    text-align:center;
+    margin-bottom:10px;
 }
 
 #map-description {
     color:white;
+    text-align:center;
 }
 
 #map {
+    margin-top:50px;
     width:500px;
     height:500px;
-    border:5px solid;
+    border:10px solid;
     margin-left:50%;
     transform: translateX(-50%);
 }
@@ -33,14 +39,56 @@ h1 {
     background-color:white;
     outline:none;
     border:none;
-    width:250px;
+    width:100px;
+    display:inline-block;
+    
 }
 
 #change-cur-level-buttons {
+    margin:0;
+    padding:0;
     margin-left:50%;
     transform: translateX(-50%);
+    display:flex;
+    justify-content:space-evenly;
+
+
 }
 
 #change-cur-level-buttons button:hover {
     background-color:rgba(165, 165, 165, 0.719);
+}
+
+#search-bar-map {
+    width:40vw;
+    height:50px;
+    font-size:1.25em;
+    background-color:white;
+    text-indent:10px;
+    transition:text-indent 0.5s;
+    margin-left:50%;
+    transform: translateX(-50%);
+}
+
+#search-bar-map:focus {
+    text-indent:0;
+}
+
+#tooltip {
+    width:150px;
+    height:100px;
+    background-color:white;
+    border:2px solid black;
+    position:absolute;
+    z-index: 3;
+    box-shadow: 5px 5px 5px;
+    visibility:hidden;
+}
+
+#floor-label {
+    position: absolute;
+    z-index: 2;
+    left:100px;
+    top:100px;
+    font-size:1.5em;
 }
