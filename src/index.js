@@ -1,12 +1,62 @@
 
+
 var ctx = null;
 var map = null;
 
-const userAgentString = navigator.userAgent;
-var curUserAgent = "";
-let safari = userAgentString.indexOf("Safari") > -1;
-let chrome = userAgentString.indexOf("Chrome") > -1;
-if (safari && !chrome) curUserAgent = "Safari";
+
+function log(what) {
+    document.getElementById("log").innerHTML += what+"<br>";
+}
+
+function getCurUserAgent() {
+    const userAgentString = navigator.userAgent;
+    let safari = userAgentString.indexOf("Safari") > -1;
+    let chrome = userAgentString.indexOf("Chrome") > -1;
+    if (safari && !chrome) return "Safari";
+    else return ""
+}
+
+/*function setCanvas(floor) {
+    if (!floor.img) {
+            
+        floor.img = new Image();
+        
+        floor.img.src = floor.imgLocation;
+        floor.img.onload = function() {
+            floor.imgLoaded = true;
+            log(floor.img);
+            document.getElementById("map").getContext("2d").drawImage(floor.img,0,0,5000,5000);
+        };
+    } else {
+        try {
+            ctx.drawImage(floor.img,0,0,5000,5000);
+            
+        } catch (e) {
+            floor.img = null;
+        }
+    }
+}*/
+
+function setCanvas(floor) {
+    if (!floor.img) {
+            
+        const img = new Image();
+        
+        img.src = floor.imgLocation;
+        img.onload = function() {
+            var imgLoaded = true;
+            document.getElementById("map").getContext("2d").drawImage(img,0,0,1000,1000);
+        };
+        floor.img = img;
+    } else {
+        try {
+            ctx.drawImage(floor.img,0,0,1000,1000);
+            
+        } catch (e) {
+            floor.img = null;
+        }
+    }
+}
 
 
 class Floor {
@@ -23,23 +73,33 @@ class Floor {
         this._lines = [];
 
         this.rooms = [];
-
         this.searchRoomNames = [];
+
+        
     }
 
     setCanvas() {
+        /*const canvas = document.getElementById("canv");
+    const image = new Image();
+    image.src = "../assets/levels/SMS-1-small.png";
+    image.onload = () => {
+        canvas.getContext("2d").drawImage(image,0,0,500,500);
+    }*/
+        
         if (!this.img) {
+            
             this.img = new Image();
             
             this.img.src = this.imgLocation;
-            const temp = this.img;
+            const that = this;
             this.img.onload = function() {
-                this.imgLoaded = true;
-                ctx.drawImage(temp,0,0,5000,5000);
+                that.imgLoaded = true;
+                document.getElementById("map").getContext("2d").drawImage(that.img,0,0,500,500);
             };
         } else {
             try {
                 ctx.drawImage(this.img,0,0,5000,5000);
+                
             } catch (e) {
                 this.img = null;
             }
@@ -66,7 +126,7 @@ class Floor {
     }
 
     static setCanvasToCurrentFloor() {
-        Floor.floors[Floor.curFloorIndex].setCanvas();
+        setCanvas(Floor.floors[Floor.curFloorIndex]);
     }
 
     addLine(line) {
@@ -193,7 +253,7 @@ class Line {
     }
 
     static load(JSONObject) {
-        return new Line(JSONObject["x1"], JSONObject["y1"], JSONObject["x2"], JSONObject["y2"]);
+        return new Line(JSONObject["x1"]/5, JSONObject["y1"]/5, JSONObject["x2"]/5, JSONObject["y2"]/5);
         
     }
 }
@@ -218,6 +278,8 @@ class Polygon {
     }
 
     isIn(x,y) {
+        x /=5;
+        y /=5;
         var intersections = 0;
         if (x < this.minX || x > this.maxX || y < this.minY || y > this.maxY) {
             return false;
@@ -326,6 +388,7 @@ class Region extends Polygon {
         this.roomNumber = roomNumber;
         this.aliases = [];
         for (var token of name.split(" ")) {
+            token = token.split("'s")[0];
             var tempAlias = undefined;
             if ((tempAlias = Region.regionAliases[token.toLowerCase()])) {
                 this.aliases.push(tempAlias);
@@ -368,15 +431,15 @@ class FollowableRegionTooltipElement {
 }
 
 var setMove = function(delta) {
+    
     Floor.move(delta);
     var curFloor = (Floor.curFloorIndex+1)
     if (!Floor.curFloorExists()) {
-        Floor.setCurrentFloor(new Floor("SMS-"+curFloor+".png"));
+        Floor.setCurrentFloor(new Floor("SMS-"+curFloor+"-small.png"));
         var rawFile = new XMLHttpRequest();
         rawFile.overrideMimeType("application/json");
         rawFile.open("GET", "../assets/levels/SMS-"+curFloor+".json", true);
         rawFile.onreadystatechange = function() {
-            
             if (rawFile.readyState === 4 && rawFile.status == 200) {
                 Floor.getCurrentFloor().load(JSON.parse(rawFile.responseText));
                 Floor.getCurrentFloor().loadSearchRoomNames();
@@ -412,12 +475,11 @@ window.addEventListener("DOMContentLoaded", function() {
 
     
 
-    
     setFloorLabelPos();
 
     setMove(0);
     var borderWidth = 0;
-    if (curUserAgent == "Safari")
+    if (getCurUserAgent() == "Safari")
         borderWidth = (map.offsetWidth - map.clientWidth) / 2
 
     function layerToRelativeX(layerX) {
@@ -430,7 +492,7 @@ window.addEventListener("DOMContentLoaded", function() {
     const tooltip = document.getElementById("tooltip");
     const tooltipBuffer = 10;
     prevDraw = -1;
-    var moveTooltip = false;
+    var moveTooltip = true;
     var clickedIndex = -1;
     map.addEventListener("click", function(ev) {
         setMove(0);
@@ -594,10 +656,22 @@ window.addEventListener("DOMContentLoaded", function() {
     });*/
 });
 
+function generateQuery(curString) {
+    var curQuery = "";
+    for (var token of curString.split(" ")) {
+        curQuery+="+"+token;
+        if (token.length >= 4) {
+            curQuery+="~1";
+        }
+        curQuery+=" ";
+    }
+    return curQuery;
+}
+
 function search(event) {
     if (event.key == "Enter") {
         setMove(0);
-        var results = Floor.getCurrentFloor().idx.search(event.srcElement.value+"~1");
+        var results = Floor.getCurrentFloor().idx.search(generateQuery(event.srcElement.value));
         var colors = {}
         for (const res of results) {
             const index = parseInt(res.ref);
