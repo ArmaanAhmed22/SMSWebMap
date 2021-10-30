@@ -3,6 +3,8 @@
 var ctx = null;
 var map = null;
 
+var moveState = false;
+
 
 function log(what) {
     document.getElementById("log").innerHTML += what+"<br>";
@@ -36,7 +38,7 @@ function getCurUserAgent() {
         }
     }
 }*/
-
+var imgLoaded = false;
 function setCanvas(floor) {
     if (!floor.img) {
             
@@ -44,10 +46,16 @@ function setCanvas(floor) {
         
         img.src = floor.imgLocation;
         img.onload = function() {
-            var imgLoaded = true;
+            console.log("LOADED");
+            imgLoaded = true;
+            Floor.getCurrentFloor().imgLoaded = true;
+            console.log(Floor.getCurrentFloor().imgLoaded)
+
             document.getElementById("map").getContext("2d").drawImage(img,0,0,1000,1000);
         };
         floor.img = img;
+        //Floor.getCurrentFloor().imgLoaded = true;
+        //this.imgLoaded = true;
     } else {
         try {
             ctx.drawImage(floor.img,0,0,1000,1000);
@@ -75,17 +83,19 @@ class Floor {
         this.rooms = [];
         this.searchRoomNames = [];
 
+        this.jsonLoaded = false;
+
         
     }
 
-    setCanvas() {
+    /*setCanvas() {
         /*const canvas = document.getElementById("canv");
     const image = new Image();
     image.src = "../assets/levels/SMS-1-small.png";
     image.onload = () => {
         canvas.getContext("2d").drawImage(image,0,0,500,500);
-    }*/
-        
+    }
+    console.log("HAPPENING")
         if (!this.img) {
             
             this.img = new Image();
@@ -93,8 +103,10 @@ class Floor {
             this.img.src = this.imgLocation;
             const that = this;
             this.img.onload = function() {
+                console.log("LOADED")
                 that.imgLoaded = true;
                 document.getElementById("map").getContext("2d").drawImage(that.img,0,0,500,500);
+                
             };
         } else {
             try {
@@ -104,7 +116,7 @@ class Floor {
                 this.img = null;
             }
         }
-    }
+    }*/
 
     static curFloorExists() {
         if (Floor.floors[Floor.curFloorIndex] == null) {
@@ -126,6 +138,7 @@ class Floor {
     }
 
     static setCanvasToCurrentFloor() {
+        console.log("setCanvasToCurrentFloor: "+Floor.curFloorIndex)
         setCanvas(Floor.floors[Floor.curFloorIndex]);
     }
 
@@ -214,8 +227,7 @@ class Floor {
         }
 
         const tempRooms = this.searchRoomNames;
-
-        this.idx = lunr(function() {
+        var tempidx = lunr(function() {
             this.ref("index");
             this.field("name");
             this.field("number");
@@ -224,9 +236,14 @@ class Floor {
                 this.add(region);
             }, this)
         });
+        this.idx = tempidx;
+    }
 
-        
-
+    search(query) {
+        while (!this.idx) {
+            this.loadSearchRoomNames()
+        }
+        return this.idx.search(query);
     }
 
     load(JSONObject) {
@@ -237,7 +254,9 @@ class Floor {
         for (var i = 0; i < JSONObject["rooms"].length; i++) {
             this.rooms[i] = Region.load(JSONObject["rooms"][i]);
         }
+        this.jsonLoaded = true;
     }
+    
 }
 
 class Line {
@@ -430,15 +449,13 @@ class FollowableRegionTooltipElement {
     }
 }
 
-var setMove = function(delta) {
-    
-    Floor.move(delta);
-    var curFloor = (Floor.curFloorIndex+1)
+/*var setInitialize = function(curFloorNumb) {
     if (!Floor.curFloorExists()) {
-        Floor.setCurrentFloor(new Floor("SMS-"+curFloor+"-small.png"));
+        
+        Floor.setCurrentFloor(new Floor("SMS-"+curFloorNumb+"-small.png"));
         var rawFile = new XMLHttpRequest();
         rawFile.overrideMimeType("application/json");
-        rawFile.open("GET", "../assets/levels/SMS-"+curFloor+".json", true);
+        rawFile.open("GET", "../assets/levels/SMS-"+curFloorNumb+".json", true);
         rawFile.onreadystatechange = function() {
             if (rawFile.readyState === 4 && rawFile.status == 200) {
                 Floor.getCurrentFloor().load(JSON.parse(rawFile.responseText));
@@ -446,11 +463,50 @@ var setMove = function(delta) {
             }
         }
         rawFile.send(null);
+    }
+}*/
+
+async function setInitialize(curFloorNumb) {
+    moveState = true;
+    var prevFloor = Floor.curFloorIndex;
+    //Floor.curFloorIndex = curFloorNumb - 1;
+
+    
+    if (!Floor.curFloorExists()) {
 
         
+        
+        Floor.setCurrentFloor(new Floor("SMS-"+curFloorNumb+"-small.png"));
+        const response = await fetch("../assets/levels/SMS-"+curFloorNumb+".json", {
+            method: "GET",
+            headers : {
+                "Content-Type": "application/json"
+            }
+        })
+        await response.json().then(data => {
+            Floor.getCurrentFloor().load(data);
+            Floor.getCurrentFloor().loadSearchRoomNames();
+            
+        });
+        
     }
+    else {
+        moveState = false;
+    }
+    //Floor.curFloorIndex = prevFloor;
+}
+
+var setMove = function(delta,draw=false) {
+    console.log("BEFORE FLOOR: "+Floor.curFloorIndex);
+    Floor.move(delta);
+    var curFloor = (Floor.curFloorIndex+1)
+    setInitialize(curFloor);
+    //Floor.move(delta);
     Floor.setCanvasToCurrentFloor();
     document.getElementById("floor-label").innerText = "Floor: " + curFloor;
+    console.log("AFTER FLOOR: "+Floor.curFloorIndex);
+    if (draw)
+        Floor.getCurrentFloor().drawLines({});
 
 
 };
@@ -465,6 +521,30 @@ function setFloorLabelPos() {
     floorLabel.style.top = map.getBoundingClientRect().top+borderWidth+"px";
 }
 
+ async function checkIsLoaded(x) {
+    await setTimeout(() => {
+        console.log(Floor.getCurrentFloor());
+        if (!imgLoaded || !Floor.getCurrentFloor().jsonLoaded) {
+            checkIsLoaded(x);
+        } else {
+            imgLoaded = false;
+            console.log("JSON: "+Floor.getCurrentFloor().jsonLoaded)
+            setMovePanel(x-1);
+        }
+    },1)
+}
+
+function setMovePanel(x) {
+    if (x <=0) return;
+    
+    setMove(1);
+    console.log("CUR FLOOR: "+Floor.curFloorIndex);
+    checkIsLoaded(x);
+    
+    
+    
+}
+
 window.addEventListener("resize", function() {
     setFloorLabelPos();
 })
@@ -477,7 +557,8 @@ window.addEventListener("DOMContentLoaded", function() {
 
     setFloorLabelPos();
 
-    setMove(0);
+    //setMove(0);
+    setMovePanel(4);
     var borderWidth = 0;
     if (getCurUserAgent() == "Safari")
         borderWidth = (map.offsetWidth - map.clientWidth) / 2
@@ -542,10 +623,10 @@ window.addEventListener("DOMContentLoaded", function() {
 
     
     document.getElementById("left-button").addEventListener("click",function() {
-        setMove(-1);
+        setMove(-1,draw=true);
     });
     document.getElementById("right-button").addEventListener("click",function() {
-        setMove(1);
+        setMove(1,draw=true);
     });
 
     var curX = -1;
@@ -656,11 +737,13 @@ window.addEventListener("DOMContentLoaded", function() {
     });*/
 });
 
+var prevQuery = null;
+
 function generateQuery(curString) {
     var curQuery = "";
     for (var token of curString.split(" ")) {
         curQuery+="+"+token;
-        if (token.length >= 4) {
+        if (token.length >= 4 && !/\d/.test(token)) {
             curQuery+="~1";
         }
         curQuery+=" ";
@@ -669,13 +752,52 @@ function generateQuery(curString) {
 }
 
 function search(event) {
+    var checked = false;
+    
     if (event.key == "Enter") {
-        setMove(0);
-        var results = Floor.getCurrentFloor().idx.search(generateQuery(event.srcElement.value));
+        if (document.getElementById("schoolwidecheck").checked) {
+            //setInitialize(1);
+            //setInitialize(2);
+            //setInitialize(3);
+            setInitialize(4);
+            checked = true;
+        }
+        if (checked) {
+            var results = null;
+            var greatestNum = -1;
+            var resultsIndex = null;
+            var escape = false;
+            for (var i = 0; i < Floor.floors.length; i++) {
+                var tempRes = Floor.floors[i].search(generateQuery(event.srcElement.value))
+                for (var res of tempRes) {
+                    if (i == Floor.curFloorIndex) {
+                        resultsIndex=i;
+                        results = tempRes;
+                        escape = true;
+                        break;
+                    }
+                    if (res.score > greatestNum) {
+                        greatestNum = res.score;
+                        results = tempRes;
+                        resultsIndex = i;
+                    }
+                }
+                if (escape) {
+                    break;
+                }
+            }
+        } else {
+            var results = Floor.getCurrentFloor().search(generateQuery(event.srcElement.value));
+        }
+        
         var colors = {}
         for (const res of results) {
             const index = parseInt(res.ref);
             colors[index] = "#ff0000";
+        }
+        setMove(0);
+        if (checked) {
+            setMove(resultsIndex-Floor.curFloorIndex);
         }
         Floor.getCurrentFloor().drawLines(colors);
         
